@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: students_app
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://students_user:students_pass@db:5432/students_db
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: students_db
+      DB_USER: students_user
+      DB_PASSWORD: students_pass
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: students_db
+    environment:
+      POSTGRES_DB: students_db
+      POSTGRES_USER: students_user
+      POSTGRES_PASSWORD: students_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database_students.sql:/docker-entrypoint-initdb.d/01-database_students.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U students_user -d students_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
